@@ -1,0 +1,38 @@
+# Continuous integration for SeldonFleet (REQ-09).
+# Runs static analysis (Android Lint) and the JVM unit tests on every push.
+name: CI
+
+on:
+  push:
+
+# The workflow only needs to read the code (least privilege).
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download the repository code into the runner.
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Install JDK 17, used by Gradle and the Android Gradle Plugin.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Configure Gradle and cache its downloads between runs.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # Static analysis: the build fails if Lint reports an error.
+      - name: Static analysis (Android Lint)
+        run: ./gradlew lint
+
+      # JVM unit tests: no emulator needed (domain is pure Kotlin).
+      - name: Unit tests (JVM)
+        run: ./gradlew test
