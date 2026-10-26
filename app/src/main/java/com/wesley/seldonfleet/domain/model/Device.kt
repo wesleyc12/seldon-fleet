@@ -20,7 +20,8 @@ data class Device(
     val batteryLevelPct: Int,
     val screenOnMinutes: Int,
     // Energy already converted to mAh by the data layer.
-    // null = record was in mWh without a valid nominal voltage (protocol, section 6).
+    // null = energy could not be converted to mAh: mWh without a valid nominal
+    // voltage (protocol, section 6) or an unknown energy unit (stage 4, decision 2).
     val energyMah: Double?,
     val jankFramesPct: Double,
     val crashCount7d: Int,

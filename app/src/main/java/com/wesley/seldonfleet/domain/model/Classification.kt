@@ -10,7 +10,7 @@ enum class Signal {
 /**
  * Input that is missing or invalid and makes the record impossible to classify.
  * ENERGY means the data layer could not convert it to mAh
- * (mWh without a valid nominal voltage, protocol section 6).
+ * (mWh without a valid nominal voltage, or an unknown energy unit).
  */
 enum class MissingData {
     BATTERY_CAPACITY,
