@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // JSON parsing for frota.json (data layer only; domain never imports it)
     implementation(libs.kotlinx.serialization.json)
+    // Saves the set of favorite device IDs on disk (data layer only; REQ-07)
+    implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)
     // Runs the ViewModel test on the JVM, no emulator
     testImplementation(libs.kotlinx.coroutines.test)
