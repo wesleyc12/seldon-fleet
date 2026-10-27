@@ -1,0 +1,128 @@
+package com.wesley.seldonfleet.ui.list
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wesley.seldonfleet.domain.model.DeviceStatus
+import com.wesley.seldonfleet.ui.ClassifiedDevice
+import com.wesley.seldonfleet.ui.StatusChip
+import com.wesley.seldonfleet.ui.label
+
+/** Entry point: reads the ViewModel state and forwards user actions to it. */
+@Composable
+fun FleetListScreen(viewModel: FleetListViewModel, modifier: Modifier = Modifier) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    FleetListContent(
+        state = state,
+        onFilterSelected = viewModel::onFilterSelected,
+        modifier = modifier,
+    )
+}
+
+/** Only draws the state it receives. No classification happens in any Composable. */
+@Composable
+fun FleetListContent(
+    state: FleetListUiState,
+    onFilterSelected: (DeviceStatus?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (state) {
+        FleetListUiState.Loading -> CenteredMessage("Carregando a frota…", modifier)
+        FleetListUiState.Error -> CenteredMessage("Não foi possível ler os dados da frota.", modifier)
+        is FleetListUiState.Loaded -> LoadedList(state, onFilterSelected, modifier)
+    }
+}
+
+@Composable
+private fun CenteredMessage(text: String, modifier: Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Composable
+private fun LoadedList(
+    state: FleetListUiState.Loaded,
+    onFilterSelected: (DeviceStatus?) -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = "Frota",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+        )
+        FilterRow(state = state, onFilterSelected = onFilterSelected)
+        HorizontalDivider()
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            // key = device id: lets Compose track each row correctly when the filter changes.
+            items(items = state.devices, key = { it.device.id }) { item ->
+                DeviceRow(item)
+                HorizontalDivider()
+            }
+        }
+    }
+}
+
+/** One chip per status with its count, plus "Todos". Single selection (decision D1). */
+@Composable
+private fun FilterRow(
+    state: FleetListUiState.Loaded,
+    onFilterSelected: (DeviceStatus?) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = state.selectedFilter == null,
+            onClick = { onFilterSelected(null) },
+            label = { Text("Todos (${state.total})") },
+        )
+        DeviceStatus.entries.forEach { status ->
+            FilterChip(
+                selected = state.selectedFilter == status,
+                onClick = { onFilterSelected(status) },
+                label = { Text("${status.label()} (${state.counts[status] ?: 0})") },
+            )
+        }
+    }
+}
+
+/** One row: id, model, battery level and the status chip (spec section 2.1). */
+@Composable
+private fun DeviceRow(item: ClassifiedDevice) {
+    ListItem(
+        headlineContent = { Text(item.device.id) },
+        supportingContent = {
+            Text("${item.device.model} · Bateria ${item.device.batteryLevelPct}%")
+        },
+        trailingContent = { StatusChip(item.classification.status) },
+    )
+}
