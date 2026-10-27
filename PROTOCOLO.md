@@ -168,7 +168,7 @@ Existem **dois níveis** de "dado errado":
 - **Raciocínio:** a regra usa **≥**. Um aparelho com dreno de **exatamente** 12,0 %/h é `CRITICO`, e a frase "acima do limiar de 12 %/h", do exemplo da especificação, seria falsa para ele. "(limiar: 12 %/h)" é verdadeiro nos dois casos.
 
 ### 8.5 Ordem da conta no código
-O código calcula `energiaMah × 100 ÷ capacidade ÷ horas de tela`, ou seja, **multiplica por 100 antes de dividir pela capacidade**. O resultado é matematicamente igual à fórmula da seção 1. Fiz assim porque o computador guarda decimais em binário: dividir antes pode transformar 7,0 em 7,000000000000001. Multiplicando antes, os valores de fronteira (7,0 e 12,0) ficam exatos, e os testes de fronteira testam o ≥ de verdade.
+O código calcula primeiro o dreno absoluto (`energiaMah ÷ horas de tela`) e depois o dreno relativo como `drenoAbsoluto × 100 ÷ capacidade`, ou seja, **multiplica por 100 antes de dividir pela capacidade**. O resultado é matematicamente igual à fórmula da seção 1. Fiz assim porque o computador guarda decimais em binário: dividir antes pode transformar 7,0 em 7,000000000000001. Multiplicando antes, os valores de fronteira (7,0 e 12,0) ficam exatos, e os testes de fronteira testam o ≥ de verdade.
 
 ### 8.6 Nota sobre a ameaça à validade (seção 7)
 O erro da conversão pode ir para **os dois lados**:
@@ -210,7 +210,7 @@ Conferi esse total de três formas independentes: um script Python à parte apli
     - **Favoritos:** contrato no domínio; a lista escuta o arquivo salvo; estrela só na lista.
 
 ### Onde a IA (Claude) ajudou
-- Explicou os conceitos e apresentou as opções de cada decisão, com prós, contras e uma recomendação. Em algumas decisões, escolhi diferente da recomendação.
+- Explicou os conceitos e apresentou as opções de cada decisão, com prós, contras e uma recomendação. Numa delas (fazer logo os testes da lista com repositório falso, em vez de deixar para o fim), escolhi diferente da recomendação.
 - Organizou o texto deste protocolo no formato final, mantendo o meu raciocínio.
 - Escreveu o código a partir das minhas decisões.
 
