@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wesley.seldonfleet.domain.model.DeviceStatus
@@ -43,6 +46,7 @@ fun FleetListScreen(
         state = state,
         onFilterSelected = viewModel::onFilterSelected,
         onDeviceClick = onDeviceClick,
+        onToggleFavorite = viewModel::onFavoriteToggled,
         modifier = modifier,
     )
 }
@@ -53,12 +57,14 @@ fun FleetListContent(
     state: FleetListUiState,
     onFilterSelected: (DeviceStatus?) -> Unit,
     onDeviceClick: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
         FleetListUiState.Loading -> CenteredMessage("Carregando a frota…", modifier)
         FleetListUiState.Error -> CenteredMessage("Não foi possível ler os dados da frota.", modifier)
-        is FleetListUiState.Loaded -> LoadedList(state, onFilterSelected, onDeviceClick, modifier)
+        is FleetListUiState.Loaded ->
+            LoadedList(state, onFilterSelected, onDeviceClick, onToggleFavorite, modifier)
     }
 }
 
@@ -78,6 +84,7 @@ private fun LoadedList(
     state: FleetListUiState.Loaded,
     onFilterSelected: (DeviceStatus?) -> Unit,
     onDeviceClick: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -91,7 +98,12 @@ private fun LoadedList(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             // key = device id: lets Compose track each row correctly when the filter changes.
             items(items = state.devices, key = { it.device.id }) { item ->
-                DeviceRow(item = item, onClick = { onDeviceClick(item.device.id) })
+                DeviceRow(
+                    item = item,
+                    isFavorite = item.device.id in state.favoriteIds,
+                    onClick = { onDeviceClick(item.device.id) },
+                    onToggleFavorite = { onToggleFavorite(item.device.id) },
+                )
                 HorizontalDivider()
             }
         }
@@ -126,10 +138,20 @@ private fun FilterRow(
     }
 }
 
-/** One tappable row: id, model, battery level and the status chip (spec section 2.1). */
+/**
+ * One tappable row: favorite star, id, model, battery level and the status chip (spec 2.1).
+ * The star is its own button: tapping it toggles the favorite and does NOT open the detail,
+ * because the inner button consumes the tap before the row's clickable sees it.
+ */
 @Composable
-private fun DeviceRow(item: ClassifiedDevice, onClick: () -> Unit) {
+private fun DeviceRow(
+    item: ClassifiedDevice,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+) {
     ListItem(
+        leadingContent = { FavoriteStar(isFavorite = isFavorite, onToggle = onToggleFavorite) },
         headlineContent = { Text(item.device.id) },
         supportingContent = {
             Text("${item.device.model} · Bateria ${item.device.batteryLevelPct}%")
@@ -137,4 +159,30 @@ private fun DeviceRow(item: ClassifiedDevice, onClick: () -> Unit) {
         trailingContent = { StatusChip(item.classification.status) },
         modifier = Modifier.clickable(onClick = onClick),
     )
+}
+
+/**
+ * Full star = favorite, empty star = not favorite (shape changes, not only the color).
+ * Plain text characters: no extra icon library needed.
+ * The content description lets screen readers announce what the button does.
+ */
+@Composable
+private fun FavoriteStar(isFavorite: Boolean, onToggle: () -> Unit) {
+    IconToggleButton(
+        checked = isFavorite,
+        onCheckedChange = { onToggle() },
+        modifier = Modifier.semantics {
+            contentDescription = if (isFavorite) "Remover dos favoritos" else "Marcar como favorito"
+        },
+    ) {
+        Text(
+            text = if (isFavorite) "★" else "☆",
+            style = MaterialTheme.typography.titleLarge,
+            color = if (isFavorite) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
 }

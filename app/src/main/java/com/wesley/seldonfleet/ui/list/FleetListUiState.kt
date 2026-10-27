@@ -17,11 +17,14 @@ sealed interface FleetListUiState {
      * [devices] is already filtered. [counts] always covers the whole fleet,
      * so the counts add up to [total] whatever the filter (REQ-05).
      * [selectedFilter] null means "all devices".
+     * [favoriteIds] holds the IDs marked as favorite (REQ-07); the screen only
+     * checks "is this ID in the set?" to draw a full or empty star.
      */
     data class Loaded(
         val devices: List<ClassifiedDevice>,
         val counts: Map<DeviceStatus, Int>,
         val total: Int,
         val selectedFilter: DeviceStatus?,
+        val favoriteIds: Set<String> = emptySet(),
     ) : FleetListUiState
 }

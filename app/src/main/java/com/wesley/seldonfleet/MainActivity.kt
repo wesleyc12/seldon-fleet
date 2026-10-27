@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
                     AppNavHost(
                         repository = container.deviceRepository,
                         classify = container.classifyDevice,
+                        favorites = container.favoritesRepository,
                         modifier = Modifier.padding(innerPadding),
                     )
                 }

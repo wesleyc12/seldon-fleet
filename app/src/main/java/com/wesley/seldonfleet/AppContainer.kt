@@ -2,10 +2,12 @@ package com.wesley.seldonfleet
 
 import android.content.Context
 import com.wesley.seldonfleet.data.mapper.DeviceMapper
+import com.wesley.seldonfleet.data.repository.FavoritesRepositoryImpl
 import com.wesley.seldonfleet.data.repository.FleetRepositoryImpl
 import com.wesley.seldonfleet.data.source.AssetFleetSource
 import com.wesley.seldonfleet.data.source.FleetJsonParser
 import com.wesley.seldonfleet.domain.repository.DeviceRepository
+import com.wesley.seldonfleet.domain.repository.FavoritesRepository
 import com.wesley.seldonfleet.domain.usecase.ClassifyDevice
 
 /**
@@ -25,4 +27,10 @@ class AppContainer(context: Context) {
 
     // The classification rule, received by whoever needs it (never created inside a screen).
     val classifyDevice: ClassifyDevice = ClassifyDevice()
+
+    // Favorites saved with DataStore (REQ-07), also typed as the domain interface.
+    // Safe to build again when MainActivity is recreated: the DataStore behind it
+    // is a single app-wide instance kept inside the data layer.
+    val favoritesRepository: FavoritesRepository =
+        FavoritesRepositoryImpl(context.applicationContext)
 }
