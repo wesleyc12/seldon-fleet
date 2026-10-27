@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     // Lets the screen observe the ViewModel state safely
     implementation(libs.androidx.lifecycle.runtime.compose)
+    // Navigation between list and detail; keeps the list alive on the back stack (REQ-06)
+    implementation(libs.androidx.navigation.compose)
     // JSON parsing for frota.json (data layer only; domain never imports it)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
