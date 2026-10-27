@@ -3,11 +3,14 @@ package com.wesley.seldonfleet
 import com.wesley.seldonfleet.domain.model.Device
 import com.wesley.seldonfleet.domain.model.DeviceStatus
 import com.wesley.seldonfleet.domain.repository.DeviceRepository
+import com.wesley.seldonfleet.domain.repository.FavoritesRepository
 import com.wesley.seldonfleet.domain.usecase.ClassifyDevice
 import com.wesley.seldonfleet.ui.list.FleetListUiState
 import com.wesley.seldonfleet.ui.list.FleetListViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -20,8 +23,8 @@ import org.junit.Test
 import java.io.IOException
 
 /**
- * List ViewModel tests on the JVM, with no emulator and no frota.json.
- * The real repository is swapped for fakes with zero changes in the ViewModel
+ * List ViewModel tests on the JVM, with no emulator, no frota.json and no DataStore file.
+ * The real repositories are swapped for fakes with zero changes in the ViewModel
  * or in domain/ (spec section 6.3). The real domain rule is used on purpose,
  * so these tests also break if the rule changes.
  */
@@ -29,7 +32,7 @@ import java.io.IOException
 class FleetListViewModelTest {
 
     // viewModelScope runs on the Android main thread, which does not exist on the JVM.
-    // A test dispatcher takes its place and runs the loading code immediately.
+    // A test dispatcher takes its place and runs the coroutines immediately.
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -48,6 +51,23 @@ class FleetListViewModelTest {
     /** Fake repository that simulates an unreadable file. */
     private class FailingDeviceRepository : DeviceRepository {
         override suspend fun getDevices(): List<Device> = throw IOException("file not readable")
+    }
+
+    /**
+     * Fake favorites store: keeps the set in memory instead of a DataStore file.
+     * Like the real one, it emits the new set every time it changes.
+     */
+    private class FakeFavoritesRepository(initial: Set<String> = emptySet()) : FavoritesRepository {
+        private val state = MutableStateFlow(initial)
+
+        /** What is "saved" right now, so the test can check the store itself. */
+        val saved: Set<String> get() = state.value
+
+        override val favoriteIds: Flow<Set<String>> = state
+
+        override suspend fun toggle(deviceId: String) {
+            state.value = if (deviceId in state.value) state.value - deviceId else state.value + deviceId
+        }
     }
 
     // Healthy device: 10 mAh in 60 min on a 1000 mAh battery = 1 %/h, no crashes, no jank -> OK.
@@ -80,8 +100,10 @@ class FleetListViewModelTest {
         device("IND-1", capacity = 0), // capacity 0 -> INDETERMINADO
     )
 
-    private fun newViewModel(repository: DeviceRepository) =
-        FleetListViewModel(repository, ClassifyDevice())
+    private fun newViewModel(
+        repository: DeviceRepository,
+        favorites: FavoritesRepository = FakeFavoritesRepository(),
+    ) = FleetListViewModel(repository, ClassifyDevice(), favorites)
 
     private fun loadedState(viewModel: FleetListViewModel): FleetListUiState.Loaded {
         val state = viewModel.uiState.value
@@ -137,5 +159,32 @@ class FleetListViewModelTest {
         val viewModel = newViewModel(FailingDeviceRepository())
 
         assertEquals(FleetListUiState.Error, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `favorites already saved show as marked when the list opens`() {
+        // Simulates reopening the app: the store already has CRIT-1 saved (REQ-07).
+        val favorites = FakeFavoritesRepository(initial = setOf("CRIT-1"))
+
+        val state = loadedState(newViewModel(FakeDeviceRepository(fleet), favorites))
+
+        assertEquals(setOf("CRIT-1"), state.favoriteIds)
+    }
+
+    @Test
+    fun `tapping the star marks the device and tapping again unmarks it`() {
+        val favorites = FakeFavoritesRepository()
+        val viewModel = newViewModel(FakeDeviceRepository(fleet), favorites)
+
+        viewModel.onFavoriteToggled("OK-1")
+        assertEquals(setOf("OK-1"), favorites.saved)                  // the store changed
+        assertEquals(setOf("OK-1"), loadedState(viewModel).favoriteIds) // the screen followed
+
+        viewModel.onFavoriteToggled("OK-1")
+        assertEquals(emptySet<String>(), favorites.saved)
+        assertEquals(emptySet<String>(), loadedState(viewModel).favoriteIds)
+
+        // Favorites never change the status counts (REQ-05).
+        assertEquals(5, loadedState(viewModel).counts.values.sum())
     }
 }
