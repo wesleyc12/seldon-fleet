@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wesley.seldonfleet.ui.list.FleetListScreen
-import com.wesley.seldonfleet.ui.list.FleetListViewModel
+import com.wesley.seldonfleet.ui.AppNavHost
 import com.wesley.seldonfleet.ui.theme.SeldonFleetTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,16 +20,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             SeldonFleetTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // The factory hands the repository and the rule to the ViewModel.
-                    // The same ViewModel instance survives screen rotation.
-                    val listViewModel: FleetListViewModel = viewModel(
-                        factory = FleetListViewModel.factory(
-                            repository = container.deviceRepository,
-                            classify = container.classifyDevice,
-                        ),
-                    )
-                    FleetListScreen(
-                        viewModel = listViewModel,
+                    // Navigation creates each screen's ViewModel with these dependencies.
+                    AppNavHost(
+                        repository = container.deviceRepository,
+                        classify = container.classifyDevice,
                         modifier = Modifier.padding(innerPadding),
                     )
                 }

@@ -1,5 +1,6 @@
 package com.wesley.seldonfleet.ui.list
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,13 +28,21 @@ import com.wesley.seldonfleet.ui.ClassifiedDevice
 import com.wesley.seldonfleet.ui.StatusChip
 import com.wesley.seldonfleet.ui.label
 
-/** Entry point: reads the ViewModel state and forwards user actions to it. */
+/**
+ * Entry point: reads the ViewModel state and forwards user actions.
+ * [onDeviceClick] only reports which device was tapped; navigation is decided outside this screen.
+ */
 @Composable
-fun FleetListScreen(viewModel: FleetListViewModel, modifier: Modifier = Modifier) {
+fun FleetListScreen(
+    viewModel: FleetListViewModel,
+    onDeviceClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     FleetListContent(
         state = state,
         onFilterSelected = viewModel::onFilterSelected,
+        onDeviceClick = onDeviceClick,
         modifier = modifier,
     )
 }
@@ -43,12 +52,13 @@ fun FleetListScreen(viewModel: FleetListViewModel, modifier: Modifier = Modifier
 fun FleetListContent(
     state: FleetListUiState,
     onFilterSelected: (DeviceStatus?) -> Unit,
+    onDeviceClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
         FleetListUiState.Loading -> CenteredMessage("Carregando a frota…", modifier)
         FleetListUiState.Error -> CenteredMessage("Não foi possível ler os dados da frota.", modifier)
-        is FleetListUiState.Loaded -> LoadedList(state, onFilterSelected, modifier)
+        is FleetListUiState.Loaded -> LoadedList(state, onFilterSelected, onDeviceClick, modifier)
     }
 }
 
@@ -67,6 +77,7 @@ private fun CenteredMessage(text: String, modifier: Modifier) {
 private fun LoadedList(
     state: FleetListUiState.Loaded,
     onFilterSelected: (DeviceStatus?) -> Unit,
+    onDeviceClick: (String) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -80,7 +91,7 @@ private fun LoadedList(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             // key = device id: lets Compose track each row correctly when the filter changes.
             items(items = state.devices, key = { it.device.id }) { item ->
-                DeviceRow(item)
+                DeviceRow(item = item, onClick = { onDeviceClick(item.device.id) })
                 HorizontalDivider()
             }
         }
@@ -115,14 +126,15 @@ private fun FilterRow(
     }
 }
 
-/** One row: id, model, battery level and the status chip (spec section 2.1). */
+/** One tappable row: id, model, battery level and the status chip (spec section 2.1). */
 @Composable
-private fun DeviceRow(item: ClassifiedDevice) {
+private fun DeviceRow(item: ClassifiedDevice, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(item.device.id) },
         supportingContent = {
             Text("${item.device.model} · Bateria ${item.device.batteryLevelPct}%")
         },
         trailingContent = { StatusChip(item.classification.status) },
+        modifier = Modifier.clickable(onClick = onClick),
     )
 }
