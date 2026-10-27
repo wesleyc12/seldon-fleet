@@ -47,9 +47,15 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    // ViewModel inside Compose, created through a factory (UI layer only)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Lets the screen observe the ViewModel state safely
+    implementation(libs.androidx.lifecycle.runtime.compose)
     // JSON parsing for frota.json (data layer only; domain never imports it)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
+    // Runs the ViewModel test on the JVM, no emulator
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
